@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тетріс</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #fff;
+            background-color: #111;
+        }
+        h1 {
+            position: absolute;
+            top: 20px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тетріс</h1>
+    <canvas id="tetris" width="300" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("tetris");
+        const context = canvas.getContext("2d");
+        context.scale(30, 30); // Масштабування для легшого малювання
+
+        let board = Array.from({ length: 20 }, () => Array(10).fill(0));
+        let currentPiece;
+        let gameOver = false;
+
+        const pieces = [
+            [[1, 1, 1, 1]], // I
+            [[1, 1, 1], [0, 1, 0]], // T
+            [[1, 1, 0], [0, 1, 1]], // Z
+            [[0, 1, 1], [1, 1, 0]], // S
+            [[1, 1], [1, 1]], // O
+            [[1, 1, 1], [1, 0, 0]], // L
+            [[1, 1, 1], [0, 0, 1]]  // J
+        ];
+
+        function drawBoard() {
+            for (let r = 0; r < board.length; r++) {
+                for (let c = 0; c < board[r].length; c++) {
+                    if (board[r][c]) {
+                        context.fillStyle = 'white';
+                        context.fillRect(c, r, 1, 1);
+                    }
+                }
+            }
+        }
+
+        function drawPiece() {
+            if (!currentPiece) return;
+            context.fillStyle = 'cyan'; // Колір фігури
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value) {
+                        context.fillRect(currentPiece.x + c, currentPiece.y + r, 1, 1);
+                    }
+                });
+            });
+        }
+
+        function merge() {
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value) {
+                        board[currentPiece.y + r][currentPiece.x + c] = 1;
+                    }
+                });
+            });
+        }
+
+        function collide() {
+            return currentPiece.shape.some((row, r) => {
+                return row.some((value, c) => {
+                    if (value) {
+                        const newX = currentPiece.x + c;
+                        const newY = currentPiece.y + r;
+                        return newX < 0 || newX >= 10 || newY >= 20 || board[newY] && board[newY][newX];
+                    }
+                    return false;
+                });
+            });
+        }
+
+        function rotate() {
+            const originalShape = currentPiece.shape;
+            currentPiece.shape = currentPiece.shape[0].map((val, index) =>
+                currentPiece.shape.map(row => row[index]).reverse()
+            );
+            if (collide()) {
+                currentPiece.shape = originalShape; // Повернути назад
+            }
+        }
+
+        function createPiece() {
+            const randomIndex = Math.floor(Math.random() * pieces.length);
+            currentPiece = {
+                shape: pieces[randomIndex],
+                x: 4,
+                y: 0
+            };
+            if (collide()) {
+                gameOver = true;
+            }
+        }
+
+        function clearRows() {
+            for (let r = board.length - 1; r >= 0; r--) {
+                if (board[r].every(cell => cell)) {
+                    board.splice(r, 1);
+                    board.unshift(Array(10).fill(0));
+                }
+            }
+        }
+
+        function drop() {
+            currentPiece.y++;
+            if (collide()) {
+                currentPiece.y--;
+                merge();
+                clearRows();
+                createPiece();
+            }
+        }
+
+        function update() {
+            if (gameOver) {
+                alert("Гру закінчено!");
+                return;
+            }
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            drawBoard();
+            drawPiece();
+            drop();
+        }
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "ArrowLeft") {
+                currentPiece.x--;
+                if (collide()) currentPiece.x++;
+            }
+            if (event.key === "ArrowRight") {
+                currentPiece.x++;
+                if (collide()) currentPiece.x--;
+            }
+            if (event.key === "ArrowDown") {
+                drop();
+            }
+            if (event.key === "ArrowUp") {
+                rotate();
+            }
+        });
+
+        createPiece();
+        setInterval(update, 1000);
+    </script>
+</body>
+</html>
